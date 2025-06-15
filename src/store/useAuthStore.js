@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 
-const base_url = import.meta.env.VITE_API_BASE_URL;
+const base_url = import.meta.env.MODE === 'development'
+  ? 'http://localhost:3000' // 👈 Dev backend
+  : import.meta.env.VITE_API_BASE_URL; // 👈 Prod backend from .env
+
 
 export const useAuthStore = create((set) => ({
   token: localStorage.getItem('admin_token') || null,

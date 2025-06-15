@@ -1,17 +1,26 @@
 import { create } from "zustand";
-
+import { useAuthStore } from "./useAuthStore";
 // ✅ Backend base URL from .env
-const base_url = import.meta.env.VITE_API_BASE_URL;
+const base_url = import.meta.env.MODE === 'development'
+  ? 'http://localhost:3000' // 👈 Dev backend
+  : import.meta.env.VITE_API_BASE_URL; // 👈 Prod backend from .env
 
+const { token } = useAuthStore.getState();
 export const useMenuStore = create((set) => ({
   dishes: [],
   setDishes: (dishes) => set({ dishes }),
 
-  createDish: async (formData) => {
+  createDish: async (formData) => {  
+    if (!token) {
+      return { success: false, message: "Unauthorized. Please log in." };
+    }
     try {
       const res = await fetch(`${base_url}/api/menu`, {
         method: "POST",
         body: formData,
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
       });
 
       const data = await res.json();
@@ -28,7 +37,13 @@ export const useMenuStore = create((set) => ({
   },
 
   fetchDishes: async () => {
+    if (!token) {
+      console.error("Unauthorized. Please log in.");
+      set({ dishes: [] });
+      return;
+    }
     try {
+
       const res = await fetch(`${base_url}/api/menu`);
       if (!res.ok) throw new Error("Failed to fetch dishes");
       const data = await res.json();
@@ -40,8 +55,14 @@ export const useMenuStore = create((set) => ({
   },
 
   deleteDish: async (dishId) => {
+    if (!token) {
+      return { success: false, message: "Unauthorized. Please log in." };
+    }
     const res = await fetch(`${base_url}/api/menu/${dishId}`, {
-      method: "DELETE"
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+      }
     });
     const data = await res.json();
     if (!data.success) return { success: false, message: data.message };
@@ -53,10 +74,13 @@ export const useMenuStore = create((set) => ({
   },
 
   updateDish: async (dishId, updatedDish) => {
+    if (!token) {
+      return { success: false, message: "Unauthorized. Please log in." };
+    }
     const res = await fetch(`${base_url}/api/menu/${dishId}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedDish)
+      headers: { Authorization: `Bearer ${token}` },
+      body: updatedDish
     });
     const data = await res.json();
     if (!data.success) return { success: false, message: data.message };
@@ -68,10 +92,13 @@ export const useMenuStore = create((set) => ({
   },
 
   toggleFeaturedDish: async (dishId, currentStatus) => {
+    if (!token) {
+      return alert("Unauthorized. Please log in.");
+    }
     try {
       const res = await fetch(`${base_url}/api/menu/feature`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ dishId, featured: !currentStatus }),
       });
       const data = await res.json();
